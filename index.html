@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crowdsourced Civic Issue Reporting — Demo</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--accent:#0b74de;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;background:var(--bg);color:#0f172a}
+    .container{max-width:980px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    h1{margin:0;font-size:20px}
+    p.lead{color:var(--muted);margin:6px 0 18px}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(12,18,31,0.06)}
+    form{display:grid;grid-template-columns:1fr 320px;gap:18px}
+    @media (max-width:900px){form{grid-template-columns:1fr} .right-col{order:2}}
+    label{display:block;font-weight:600;margin-bottom:6px}
+    input[type=text],textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef6;font-size:14px}
+    textarea{min-height:120px;resize:vertical}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;background:var(--accent);color:#fff;border:0;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .field{margin-bottom:12px}
+    .photo-preview{width:100%;height:180px;border-radius:8px;background:#f3f6fa;border:1px dashed #dbeafe;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .photo-preview img{max-width:100%;max-height:100%;object-fit:cover}
+    .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .chip{background:#eef2ff;padding:6px 10px;border-radius:999px;font-size:13px}
+    .small{font-size:13px}
+    .status{margin-top:10px}
+    .right-col{display:flex;flex-direction:column;gap:12px}
+    .map-placeholder{height:180px;border-radius:8px;background:linear-gradient(180deg,#eef2ff,#ffffff);display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid #e6eef6}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">CI</div>
+      <div>
+        <h1>Crowdsourced Civic Issue Reporting</h1>
+        <p class="lead">Report local civic issues (potholes, streetlights, garbage) — attach a photo and location. Demo frontend only.</p>
+      </div>
+    </header>
+
+    <main class="card" style="margin-top:16px">
+      <form id="reportForm" autocomplete="off">
+        <div>
+          <div class="field">
+            <label for="title">Issue title</label>
+            <input id="title" name="title" type="text" placeholder="e.g. Large pothole on 4th Street" required />
+          </div>
+
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="">-- Select category --</option>
+              <option>Road / Pothole</option>
+              <option>Streetlight</option>
+              <option>Garbage / Waste</option>
+              <option>Water leakage</option>
+              <option>Illegal dumping</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Describe the issue, exact location details, how long it's been there..." required></textarea>
+          </div>
+
+          <div class="field meta">
+            <div class="small">Add urgency:</div>
+            <label class="chip"><input type="radio" name="urgency" value="low" checked /> Low</label>
+            <label class="chip"><input type="radio" name="urgency" value="medium" /> Medium</label>
+            <label class="chip"><input type="radio" name="urgency" value="high" /> High</label>
+          </div>
+
+          <div class="field">
+            <label>Attach photo (optional)</label>
+            <input id="photo" name="photo" type="file" accept="image/*" />
+            <div class="photo-preview" id="preview">No photo selected</div>
+          </div>
+
+          <div class="field">
+            <label>Location</label>
+            <div class="muted">Use the button to capture your device's GPS coordinates (browser will prompt).</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button type="button" id="getLocationBtn" class="btn" style="background:#0ea5a4">Use my location</button>
+              <input id="coords" name="coords" type="text" placeholder="Latitude, Longitude" readonly style="flex:1" />
+            </div>
+          </div>
+
+          <div class="field">
+            <button class="btn" type="submit">Submit Report</button>
+            <span style="margin-left:10px" class="muted">(This demo sends data to <code>/api/report</code> — create a server endpoint to store it.)</span>
+          </div>
+
+          <div id="status" class="status muted"></div>
+        </div>
+
+        <aside class="right-col">
+          <div class="card" style="padding:12px">
+            <div class="small" style="font-weight:700">Quick tips</div>
+            <ul class="muted small">
+              <li>Take a close, clear photo of the problem.</li>
+              <li>Pinpoint the exact location or add nearby landmark in the description.</li>
+              <li>Upvote existing reports to raise priority (feature to add on server).</li>
+            </ul>
+          </div>
+
+          <div class="card" style="padding:12px">
+            <div class="small" style="font-weight:700">Preview (map)</div>
+            <div class="map-placeholder" id="mapPlaceholder">Map preview will show coordinates here.</div>
+          </div>
+
+          <div class="card" style="padding:12px">
+            <div class="small" style="font-weight:700">Saved locally</div>
+            <div class="muted small" id="localCount">No unsent reports</div>
+            <div style="margin-top:10px"><button id="sendSaved" type="button" class="btn">Send saved reports</button></div>
+          </div>
+        </aside>
+      </form>
+
+      <footer>
+        <div>Prototype • Not for production. Implement server-side validation & authentication before using in real deployments.</div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // Elements
+    const photo = document.getElementById('photo');
+    const preview = document.getElementById('preview');
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    const coordsInput = document.getElementById('coords');
+    const statusEl = document.getElementById('status');
+    const reportForm = document.getElementById('reportForm');
+    const localCount = document.getElementById('localCount');
+    const sendSavedBtn = document.getElementById('sendSaved');
+    const mapPlaceholder = document.getElementById('mapPlaceholder');
+
+    // Photo preview
+    photo.addEventListener('change', ()=>{
+      const file = photo.files[0];
+      if(!file){ preview.textContent = 'No photo selected'; return; }
+      const img = document.createElement('img');
+      img.onload = ()=> { preview.innerHTML = ''; preview.appendChild(img); }
+      img.src = URL.createObjectURL(file);
+    });
+
+    // Geolocation
+    getLocationBtn.addEventListener('click', ()=>{
+      if(!navigator.geolocation){ alert('Geolocation not supported in this browser.'); return; }
+      statusEl.textContent = 'Getting location — please allow the browser prompt...';
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        coordsInput.value = `${lat}, ${lon}`;
+        statusEl.textContent = 'Location captured.';
+        mapPlaceholder.textContent = `Lat: ${lat} · Lon: ${lon}`;
+      }, (err)=>{
+        statusEl.textContent = 'Unable to get location: ' + err.message;
+      }, {enableHighAccuracy:true,timeout:10000});
+    });
+
+    // Helper: save unsent reports to localStorage
+    function getSaved(){ try{return JSON.parse(localStorage.getItem('unsentReports')||'[]')}catch(e){return[]} }
+    function saveReportLocally(obj){ const arr = getSaved(); arr.push(obj); localStorage.setItem('unsentReports', JSON.stringify(arr)); updateLocalCount(); }
+    function updateLocalCount(){ const n = getSaved().length; localCount.textContent = n ? `${n} unsent report(s)` : 'No unsent reports'; }
+    updateLocalCount();
+
+    // Submit handler
+    reportForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      statusEl.textContent = '';
+      const form = new FormData(reportForm);
+
+      // Basic client validation
+      if(!form.get('title') || !form.get('category') || !form.get('description')){
+        statusEl.textContent = 'Please fill required fields.'; return;
+      }
+
+      // Build payload for JSON preview (server should accept FormData or JSON)
+      const payload = {
+        title: form.get('title'),
+        category: form.get('category'),
+        description: form.get('description'),
+        urgency: form.get('urgency') || 'low',
+        coords: form.get('coords') || null,
+        createdAt: new Date().toISOString()
+      };
+
+      // If there is a photo, convert to blob and append to FormData
+      const fd = new FormData();
+      fd.append('meta', new Blob([JSON.stringify(payload)], {type:'application/json'}));
+      const file = photo.files[0];
+      if(file) fd.append('photo', file, file.name);
+
+      statusEl.textContent = 'Sending report...';
+
+      try{
+        // Try to POST to /api/report — replace this URL with your server endpoint
+        const res = await fetch('/api/report', { method:'POST', body: fd });
+        if(!res.ok) throw new Error('Server responded ' + res.status);
+        const json = await res.json();
+        statusEl.textContent = 'Report submitted successfully. ID: ' + (json.id || '(no id)');
+        reportForm.reset(); preview.textContent = 'No photo selected'; coordsInput.value = ''; mapPlaceholder.textContent = 'Map preview will show coordinates here.';
+      }catch(err){
+        // On failure, save locally so user doesn't lose report
+        saveReportLocally({payload, photoName: file ? file.name : null});
+        statusEl.textContent = 'Could not send report (offline or server error). Saved locally.';
+      }
+    });
+
+    // Send saved reports
+    sendSavedBtn.addEventListener('click', async ()=>{
+      const saved = getSaved();
+      if(!saved.length){ alert('No saved reports to send.'); return; }
+      statusEl.textContent = 'Sending saved reports...';
+      // NOTE: This demo saved only metadata (not binary photo). Production must store files or queue them properly.
+      let successCount = 0;
+      for(const r of saved){
+        try{
+          const res = await fetch('/api/report', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r.payload)});
+          if(res.ok){ successCount++; }
+        }catch(e){ /* ignore */ }
+      }
+      // Remove all saved after attempt
+      localStorage.removeItem('unsentReports');
+      updateLocalCount();
+      statusEl.textContent = `Finished. ${successCount}/${saved.length} sent.`;
+    });
+  </script>
+</body>
+</html>
